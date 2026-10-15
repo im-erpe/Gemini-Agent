@@ -4,7 +4,7 @@ from google import genai
 from google.genai import types
 import argparse
 from prompts import system_prompt
-from call_function import available_functions
+from call_function import available_functions,call_function
 
 
 def main():
@@ -41,8 +41,17 @@ def generate_content(client, messages, verbose):
     if verbose:
         print("Prompt tokens:", response.usage_metadata.prompt_token_count)
         print("Response tokens:", response.usage_metadata.candidates_token_count)
-    print("Response:")
-    print(response.function_calls)
+        print("Response:")
+    if not response.function_calls:
+        print(response.text)
+    else:
+        for function_call in response.function_calls:
+            result_message = call_function(function_call, verbose)
+            if not result_message["content"]:
+                raise RuntimeError("Function call returned no content")
+            elif verbose:
+                print(f"-> {result_message['content']}")
+        
 
 
 if __name__ == "__main__":
