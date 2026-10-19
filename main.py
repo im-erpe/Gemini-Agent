@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -23,7 +24,17 @@ def main():
     if args.verbose:
         print(f"User prompt: {args.user_prompt}\n")
 
-    generate_content(client, messages, args.verbose)
+    #generate_content(client, messages, args.verbose)
+
+    for i in range(20):
+        final_response = generate_content(client, messages, args.verbose)
+        if final_response is not None:
+            print("Final response:")
+            print(final_response)
+            break
+    else:
+        print("Problem was not solved!")
+        sys.exit(0)
 
 
 def generate_content(client, messages, verbose):
@@ -38,19 +49,29 @@ def generate_content(client, messages, verbose):
     if not response.usage_metadata:
         raise RuntimeError("Gemini API response appears to be malformed")
 
+    messages.append(response.candidates[0].content)    
+
     if verbose:
         print("Prompt tokens:", response.usage_metadata.prompt_token_count)
         print("Response tokens:", response.usage_metadata.candidates_token_count)
         print("Response:")
+
+
+
     if not response.function_calls:
-        print(response.text)
+        return response.text
     else:
         for function_call in response.function_calls:
             result_message = call_function(function_call, verbose)
-            if not result_message["content"]:
+            if not result_message.parts[0].function_response.response:
                 raise RuntimeError("Function call returned no content")
-            elif verbose:
-                print(f"-> {result_message['content']}")
+
+            messages.append(result_message)
+
+            if verbose:
+                print(f"-> {result_message.parts[0].function_response.response}")
+                
+
         
 
 

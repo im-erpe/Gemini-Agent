@@ -12,7 +12,7 @@ available_functions = types.Tool(
 
 def call_function(tool_call,verbose: bool = False) -> dict:
     function_name = tool_call.name
-    function_args = tool_call.args
+    function_args = dict(tool_call.args or {})
 
     if verbose:
         print (f" - Calling function: {function_name}({function_args})")
@@ -27,16 +27,14 @@ def call_function(tool_call,verbose: bool = False) -> dict:
     }
 
     if function_name not in function_map:
-        return {
-            "role": "tool",
-            "tool_call_id": tool_call.id,
-            "content": f"Error: Unknown function: {function_name}",
-        }
+        return types.Content(
+            role="tool", 
+            parts=[types.Part.from_function_response(name=function_name,response={"error": f'Unknown function: {function_name}'})]
+            )
     else:
         function_args["working_directory"] = "./calculator"
         result = function_map[function_name](**function_args)
-        return {
-            "role": "tool",
-            "tool_call_id": tool_call.id,
-            "content": result,
-        }
+        return types.Content(
+            role="tool", 
+            parts=[types.Part.from_function_response(name=function_name,response={"result": result})]
+            )
